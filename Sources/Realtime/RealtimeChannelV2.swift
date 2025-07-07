@@ -24,24 +24,18 @@ public struct RealtimeChannelConfig: Sendable {
   public var isPrivate: Bool
 }
 
-public final class RealtimeChannelV2: Sendable {
-  struct MutableState {
-    var clientChanges: [PostgresJoinConfig] = []
-    var joinRef: String?
-    var pushes: [String: PushV2] = [:]
-  }
-
-  @MainActor
-  private var mutableState = MutableState()
+@RealtimeActor
+public final class RealtimeChannelV2 {
+  private(set) var clientChanges: [PostgresJoinConfig] = []
+  private(set) var joinRef: String?
+  private(set) var pushes: [String: PushV2] = [:]
 
   let topic: String
 
-  @MainActor var config: RealtimeChannelConfig
+  var config: RealtimeChannelConfig
 
   let logger: (any SupabaseLogger)?
   let socket: RealtimeClientV2
-
-  @MainActor var joinRef: String? { mutableState.joinRef }
 
   let callbackManager = CallbackManager()
   private let statusSubject = AsyncValueSubject<RealtimeChannelStatus>(.unsubscribed)
@@ -80,11 +74,10 @@ public final class RealtimeChannelV2: Sendable {
   }
 
   deinit {
-    callbackManager.reset()
+    //    callbackManager.reset()
   }
 
   /// Subscribes to the channel
-  @MainActor
   public func subscribe() async {
     if socket.status != .connected {
       if socket.options.connectOnSubscribe != true {
@@ -104,7 +97,7 @@ public final class RealtimeChannelV2: Sendable {
     let joinConfig = RealtimeJoinConfig(
       broadcast: config.broadcast,
       presence: config.presence,
-      postgresChanges: mutableState.clientChanges,
+      postgresChanges: clientChanges,
       isPrivate: config.isPrivate
     )
 
@@ -115,7 +108,7 @@ public final class RealtimeChannelV2: Sendable {
     )
 
     let joinRef = socket.makeRef()
-    mutableState.joinRef = joinRef
+    self.joinRef = joinRef
 
     logger?.debug("Subscribing to channel with body: \(joinConfig)")
 
@@ -172,7 +165,6 @@ public final class RealtimeChannelV2: Sendable {
   /// - Parameters:
   ///   - event: Broadcast message event.
   ///   - message: Message payload.
-  @MainActor
   public func broadcast(event: String, message: JSONObject) async {
     if status != .subscribed {
       struct Message: Encodable {
@@ -298,7 +290,7 @@ public final class RealtimeChannelV2: Sendable {
           throw RealtimeError("Received a reply with unexpected payload: \(message)")
         }
 
-        await didReceiveReply(ref: ref, status: status)
+        didReceiveReply(ref: ref, status: status)
 
         if message.payload["response"]?.objectValue?.keys
           .contains(ChannelEvent.postgresChanges) == true
@@ -415,7 +407,9 @@ public final class RealtimeChannelV2: Sendable {
 
     return RealtimeSubscription { [weak callbackManager, logger] in
       logger?.debug("Removing presence callback with id: \(id)")
-      callbackManager?.removeCallback(id: id)
+      Task {
+        await callbackManager?.removeCallback(id: id)
+      }
     }
   }
 
@@ -515,14 +509,14 @@ public final class RealtimeChannelV2: Sendable {
       filter: filter
     )
 
-    Task { @MainActor in
-      mutableState.clientChanges.append(config)
-    }
+    clientChanges.append(config)
 
     let id = callbackManager.addPostgresCallback(filter: config, callback: callback)
     return RealtimeSubscription { [weak callbackManager, logger] in
       logger?.debug("Removing postgres callback with id: \(id)")
-      callbackManager?.removeCallback(id: id)
+      Task {
+        await callbackManager?.removeCallback(id: id)
+      }
     }
   }
 
@@ -534,7 +528,9 @@ public final class RealtimeChannelV2: Sendable {
     let id = callbackManager.addBroadcastCallback(event: event, callback: callback)
     return RealtimeSubscription { [weak callbackManager, logger] in
       logger?.debug("Removing broadcast callback with id: \(id)")
-      callbackManager?.removeCallback(id: id)
+      Task {
+        await callbackManager?.removeCallback(id: id)
+      }
     }
   }
 
@@ -545,7 +541,9 @@ public final class RealtimeChannelV2: Sendable {
     let id = callbackManager.addSystemCallback(callback: callback)
     return RealtimeSubscription { [weak callbackManager, logger] in
       logger?.debug("Removing system callback with id: \(id)")
-      callbackManager?.removeCallback(id: id)
+      Task {
+        await callbackManager?.removeCallback(id: id)
+      }
     }
   }
 
@@ -556,7 +554,6 @@ public final class RealtimeChannelV2: Sendable {
     self.onSystem { _ in callback() }
   }
 
-  @MainActor
   @discardableResult
   func push(_ event: String, ref: String? = nil, payload: JSONObject = [:]) async -> PushStatus {
     let message = RealtimeMessageV2(
@@ -569,15 +566,14 @@ public final class RealtimeChannelV2: Sendable {
 
     let push = PushV2(channel: self, message: message)
     if let ref = message.ref {
-      mutableState.pushes[ref] = push
+      pushes[ref] = push
     }
 
     return await push.send()
   }
 
-  @MainActor
   private func didReceiveReply(ref: String, status: String) {
-    let push = mutableState.pushes.removeValue(forKey: ref)
+    let push = pushes.removeValue(forKey: ref)
     push?.didReceive(status: PushStatus(rawValue: status) ?? .ok)
   }
 }

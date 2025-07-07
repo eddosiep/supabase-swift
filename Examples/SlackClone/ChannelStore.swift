@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import IssueReporting
 import Supabase
 
 @MainActor
@@ -19,8 +20,9 @@ final class ChannelStore {
   var messages: MessageStore { Dependencies.shared.messages }
 
   private init() {
-    Task {
-      channels = await fetchChannels()
+    Task { @RealtimeActor in
+      let channels = await fetchChannels()
+      await setChannels(channels)
 
       let channel = supabase.channel("public:channels")
 
@@ -31,16 +33,20 @@ final class ChannelStore {
 
       Task {
         for await insertion in insertions {
-          handleInsertedChannel(insertion)
+          await handleInsertedChannel(insertion)
         }
       }
 
       Task {
         for await delete in deletions {
-          handleDeletedChannel(delete)
+          await handleDeletedChannel(delete)
         }
       }
     }
+  }
+
+  private func setChannels(_ channels: [Channel]) {
+    self.channels = channels
   }
 
   func addChannel(_ name: String) async {
@@ -62,7 +68,8 @@ final class ChannelStore {
       return channel
     }
 
-    let channel: Channel = try await supabase
+    let channel: Channel =
+      try await supabase
       .from("channels")
       .select()
       .eq("id", value: id)
@@ -92,7 +99,7 @@ final class ChannelStore {
     do {
       return try await supabase.from("channels").select().execute().value
     } catch {
-      dump(error)
+      reportIssue(error)
       toast = .init(status: .error, title: "Error", description: error.localizedDescription)
       return []
     }

@@ -8,6 +8,7 @@
 import Foundation
 import OSLog
 import Supabase
+import IssueReporting
 
 @MainActor
 @Observable
@@ -18,7 +19,7 @@ final class UserStore {
   private(set) var presences: [User.ID: UserPresence] = [:]
 
   private init() {
-    Task {
+    Task { @RealtimeActor in
       let channel = supabase.channel("public:users")
       let changes = channel.postgresChange(AnyAction.self, table: "users")
 
@@ -36,7 +37,7 @@ final class UserStore {
 
       Task {
         for await change in changes {
-          handleChangedUser(change)
+          await handleChangedUser(change)
         }
       }
 
@@ -46,12 +47,12 @@ final class UserStore {
           let leaves = try presence.decodeLeaves(as: UserPresence.self)
 
           for leave in leaves {
-            self.presences[leave.userId] = nil
+            await self.setPresence(id: leave.userId, presence: nil)
             Logger.main.debug("User \(leave.userId) leaved")
           }
 
           for join in joins {
-            self.presences[join.userId] = join
+            await self.setPresence(id: join.userId, presence: join)
             Logger.main.debug("User \(join.userId) joined")
           }
         }
@@ -59,12 +60,17 @@ final class UserStore {
     }
   }
 
+  func setPresence(id: User.ID, presence: UserPresence?) {
+    self.presences[id] = presence
+  }
+
   func fetchUser(id: UUID) async throws -> User {
     if let user = users[id] {
       return user
     }
 
-    let user: User = try await supabase
+    let user: User =
+      try await supabase
       .from("users")
       .select()
       .eq("id", value: id)
@@ -76,7 +82,7 @@ final class UserStore {
   }
 
   private func handleChangedUser(_ action: AnyAction) {
-    do {
+    withErrorReporting {
       switch action {
       case let .insert(action):
         let user = try action.decodeRecord(decoder: decoder) as User
@@ -87,11 +93,7 @@ final class UserStore {
       case let .delete(action):
         guard let id = action.oldRecord["id"]?.stringValue else { return }
         users[UUID(uuidString: id)!] = nil
-      default:
-        break
       }
-    } catch {
-      dump(error)
     }
   }
 }

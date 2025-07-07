@@ -14,7 +14,7 @@ public enum PushStatus: String, Sendable {
   case timeout
 }
 
-@MainActor
+@RealtimeActor
 final class PushV2 {
   private weak var channel: RealtimeChannelV2?
   let message: RealtimeMessageV2

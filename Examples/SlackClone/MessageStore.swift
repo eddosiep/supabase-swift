@@ -33,8 +33,8 @@ struct Messages {
 
   mutating func appendOrUpdate(_ message: Message) {
     if let sectionIndex = messageToSectionLookupTable[message.id],
-       let messageIndex = sections[sectionIndex].messages
-       .firstIndex(where: { $0.id == message.id })
+      let messageIndex = sections[sectionIndex].messages
+        .firstIndex(where: { $0.id == message.id })
     {
       sections[sectionIndex].messages[messageIndex] = message
     } else {
@@ -102,7 +102,7 @@ final class MessageStore {
   var channel: ChannelStore { Dependencies.shared.channel }
 
   private init() {
-    Task {
+    Task { @RealtimeActor in
       let channel = supabase.channel("public:messages")
 
       let insertions = channel.postgresChange(InsertAction.self, table: "messages")
@@ -125,7 +125,7 @@ final class MessageStore {
 
       Task {
         for await delete in deletions {
-          handleDeletedMessage(delete)
+          await handleDeletedMessage(delete)
         }
       }
     }
