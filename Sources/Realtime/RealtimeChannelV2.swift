@@ -36,6 +36,7 @@ public final class RealtimeChannelV2 {
 
   let logger: (any SupabaseLogger)?
   let socket: RealtimeClientV2
+  let maxRetryAttempt = 5
 
   let callbackManager = CallbackManager()
   private let statusSubject = AsyncValueSubject<RealtimeChannelStatus>(.unsubscribed)
@@ -79,6 +80,43 @@ public final class RealtimeChannelV2 {
 
   /// Subscribes to the channel
   public func subscribe() async {
+    logger?.debug("Starting subscription to channel '\(topic)' (attempt 1/\(maxRetryAttempt))")
+
+    var attempts = 0
+
+    while attempts < maxRetryAttempt {
+      attempts += 1
+
+      do {
+        logger?.debug(
+          "Attempting to subscribe to channel '\(topic)' (attempt \(attempts)/\(maxRetryAttempt))"
+        )
+        try await withTimeout(interval: socket.options.timeoutInterval) { [self] in
+          await _subscribe()
+        }
+        logger?.debug("Successfully subscribed to channel '\(topic)'")
+        return
+      } catch is TimeoutError {
+        logger?.debug(
+          "Subscribe timed out for channel '\(topic)' (attempt \(attempts)/\(maxRetryAttempt))"
+        )
+        if attempts < maxRetryAttempt {
+          logger?.debug("Retrying subscription to channel '\(topic)'...")
+        } else {
+          logger?.error(
+            "Failed to subscribe to channel '\(topic)' after \(maxRetryAttempt) attempts due to timeout"
+          )
+        }
+      } catch {
+        preconditionFailure("The only error possibly thrown is TimeoutError.")
+      }
+    }
+
+    logger?.error("Subscription to channel '\(topic)' failed after \(attempts) attempts")
+  }
+
+  /// Subscribes to the channel
+  private func _subscribe() async {
     if socket.status != .connected {
       if socket.options.connectOnSubscribe != true {
         reportIssue(
@@ -118,18 +156,7 @@ public final class RealtimeChannelV2 {
       payload: try! JSONObject(payload)
     )
 
-    do {
-      try await withTimeout(interval: socket.options.timeoutInterval) { [self] in
-        _ = await statusChange.first { @Sendable in $0 == .subscribed }
-      }
-    } catch {
-      if error is TimeoutError {
-        logger?.debug("Subscribe timed out.")
-        await subscribe()
-      } else {
-        logger?.error("Subscribe failed: \(error)")
-      }
-    }
+    _ = await statusChange.first { @Sendable in $0 == .subscribed }
   }
 
   public func unsubscribe() async {
