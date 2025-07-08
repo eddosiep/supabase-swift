@@ -12,6 +12,7 @@ import XCTestDynamicOverlay
 
 @testable import Realtime
 
+@RealtimeActor
 final class RealtimeChannelTests: XCTestCase {
   let sut = RealtimeChannelV2(
     topic: "topic",
@@ -130,7 +131,6 @@ final class RealtimeChannelTests: XCTestCase {
     }
   }
 
-  @MainActor
   func testPresenceEnabledDuringSubscribe() async {
     // Create fake WebSocket for testing
     let (client, server) = FakeWebSocket.fakes()
