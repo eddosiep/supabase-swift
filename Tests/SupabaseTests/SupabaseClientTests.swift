@@ -72,6 +72,8 @@ final class SupabaseClientTests: XCTestCase {
         "X-Client-Info": "supabase-swift/0.0.0",
         "X-Supabase-Client-Platform": "macOS",
         "X-Supabase-Client-Platform-Version": "0.0.0",
+        "X-Supabase-Client-Runtime": "swift",
+        "X-Supabase-Client-Runtime-Version": "0.0",
         "header_field": "header_value"
       ]
       """

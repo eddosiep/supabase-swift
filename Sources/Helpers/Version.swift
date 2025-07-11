@@ -55,6 +55,24 @@ private let _platformVersion: String? = {
   #endif
 }()
 
+#if swift(>=6.2)
+  private let _swiftVersion = "6.2"
+#elseif swift(>=6.1)
+  private let _swiftVersion = "6.1"
+#elseif swift(>=6.0)
+  private let _swiftVersion = "6.0"
+#elseif swift(>=5.10)
+  private let _swiftVersion = "5.10"
+#else
+  #error("Unsupported Swift version")
+#endif
+
+#if DEBUG
+  package let swiftVersion = isTesting ? "0.0" : _swiftVersion
+#else
+  package let swiftVersion = _swiftVersion
+#endif
+
 #if DEBUG
   package let platform = isTesting ? "macOS" : _platform
 #else

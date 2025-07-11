@@ -20,5 +20,8 @@ let defaultHeaders: [String: String] = {
     headers["X-Supabase-Client-Platform-Version"] = platformVersion
   }
 
+  headers["X-Supabase-Client-Runtime"] = "swift"
+  headers["X-Supabase-Client-Runtime-Version"] = swiftVersion
+
   return headers
 }()
