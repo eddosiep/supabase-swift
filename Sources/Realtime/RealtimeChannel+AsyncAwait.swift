@@ -35,23 +35,6 @@ extension RealtimeChannelV2 {
   }
 
   /// Listen for postgres changes in a channel.
-  @available(
-    *,
-     deprecated,
-     message: "Use the new filter syntax instead."
-  )
-  @_disfavoredOverload
-  public func postgresChange(
-    _: InsertAction.Type,
-    schema: String = "public",
-    table: String? = nil,
-    filter: String? = nil
-  ) -> AsyncStream<InsertAction> {
-    postgresChange(event: .insert, schema: schema, table: table, filter: filter)
-      .compactErase()
-  }
-
-  /// Listen for postgres changes in a channel.
   public func postgresChange(
     _: UpdateAction.Type,
     schema: String = "public",
@@ -59,23 +42,6 @@ extension RealtimeChannelV2 {
     filter: RealtimePostgresFilter? = nil
   ) -> AsyncStream<UpdateAction> {
     postgresChange(event: .update, schema: schema, table: table, filter: filter?.value)
-      .compactErase()
-  }
-
-  /// Listen for postgres changes in a channel.
-  @available(
-    *,
-     deprecated,
-     message: "Use the new filter syntax instead."
-  )
-  @_disfavoredOverload
-  public func postgresChange(
-    _: UpdateAction.Type,
-    schema: String = "public",
-    table: String? = nil,
-    filter: String? = nil
-  ) -> AsyncStream<UpdateAction> {
-    postgresChange(event: .update, schema: schema, table: table, filter: filter)
       .compactErase()
   }
 
@@ -91,23 +57,6 @@ extension RealtimeChannelV2 {
   }
 
   /// Listen for postgres changes in a channel.
-  @available(
-    *,
-     deprecated,
-     message: "Use the new filter syntax instead."
-  )
-  @_disfavoredOverload
-  public func postgresChange(
-    _: DeleteAction.Type,
-    schema: String = "public",
-    table: String? = nil,
-    filter: String? = nil
-  ) -> AsyncStream<DeleteAction> {
-    postgresChange(event: .delete, schema: schema, table: table, filter: filter)
-      .compactErase()
-  }
-
-  /// Listen for postgres changes in a channel.
   public func postgresChange(
     _: AnyAction.Type,
     schema: String = "public",
@@ -115,22 +64,6 @@ extension RealtimeChannelV2 {
     filter: RealtimePostgresFilter? = nil
   ) -> AsyncStream<AnyAction> {
     postgresChange(event: .all, schema: schema, table: table, filter: filter?.value)
-  }
-
-  /// Listen for postgres changes in a channel.
-  @available(
-    *,
-     deprecated,
-     message: "Use the new filter syntax instead."
-  )
-  @_disfavoredOverload
-  public func postgresChange(
-    _: AnyAction.Type,
-    schema: String = "public",
-    table: String? = nil,
-    filter: String? = nil
-  ) -> AsyncStream<AnyAction> {
-    postgresChange(event: .all, schema: schema, table: table, filter: filter)
   }
 
   private func postgresChange(
@@ -182,12 +115,6 @@ extension RealtimeChannelV2 {
     }
 
     return stream
-  }
-
-  /// Listen for broadcast messages sent by other clients within the same channel under a specific `event`.
-  @available(*, deprecated, renamed: "broadcastStream(event:)")
-  public func broadcast(event: String) -> AsyncStream<JSONObject> {
-    broadcastStream(event: event)
   }
 }
 

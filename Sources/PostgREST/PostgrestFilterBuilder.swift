@@ -570,27 +570,27 @@ public class PostgrestFilterBuilder: PostgrestTransformBuilder, @unchecked Senda
     fts(column, query: query, config: config)
   }
 
-  public func plainToFullTextSearch(
-    _ column: String,
-    query: String,
-    config: String? = nil
-  ) -> PostgrestFilterBuilder {
-    plfts(column, query: query, config: config)
-  }
-
-  public func phraseToFullTextSearch(
-    _ column: String,
-    query: String,
-    config: String? = nil
-  ) -> PostgrestFilterBuilder {
-    phfts(column, query: query, config: config)
-  }
-
-  public func webFullTextSearch(
-    _ column: String,
-    query: String,
-    config: String? = nil
-  ) -> PostgrestFilterBuilder {
-    wfts(column, query: query, config: config)
-  }
+//  public func plainToFullTextSearch(
+//    _ column: String,
+//    query: String,
+//    config: String? = nil
+//  ) -> PostgrestFilterBuilder {
+//    plfts(column, query: query, config: config)
+//  }
+//
+//  public func phraseToFullTextSearch(
+//    _ column: String,
+//    query: String,
+//    config: String? = nil
+//  ) -> PostgrestFilterBuilder {
+//    phfts(column, query: query, config: config)
+//  }
+//
+//  public func webFullTextSearch(
+//    _ column: String,
+//    query: String,
+//    config: String? = nil
+//  ) -> PostgrestFilterBuilder {
+//    wfts(column, query: query, config: config)
+//  }
 }

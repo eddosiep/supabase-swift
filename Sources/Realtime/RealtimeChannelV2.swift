@@ -160,13 +160,6 @@ public final class RealtimeChannelV2: Sendable, RealtimeChannelProtocol {
     throw RealtimeError.maxRetryAttemptsReached
   }
 
-  /// Subscribes to the channel.
-  @available(*, deprecated, message: "Use `subscribeWithError` instead")
-  @MainActor
-  public func subscribe() async {
-    try? await subscribeWithError()
-  }
-
   /// Calculates retry delay with exponential backoff and jitter
   private func calculateRetryDelay(for attempt: Int) -> TimeInterval {
     let baseDelay: TimeInterval = 1.0
@@ -232,20 +225,6 @@ public final class RealtimeChannelV2: Sendable, RealtimeChannelProtocol {
     logger?.debug("Unsubscribing from channel \(topic)")
 
     await push(ChannelEvent.leave)
-  }
-
-  @available(
-    *,
-    deprecated,
-    message:
-      "manually updating auth token per channel is not recommended, please use `setAuth` in RealtimeClient instead."
-  )
-  public func updateAuth(jwt: String?) async {
-    logger?.debug("Updating auth token for channel \(topic)")
-    await push(
-      ChannelEvent.accessToken,
-      payload: ["access_token": jwt.map { .string($0) } ?? .null]
-    )
   }
 
   /// Send a broadcast message with `event` and a `Codable` payload.
@@ -360,16 +339,12 @@ public final class RealtimeChannelV2: Sendable, RealtimeChannelProtocol {
 
   func onMessage(_ message: RealtimeMessageV2) async {
     do {
-      guard let eventType = message._eventType else {
+      guard let eventType = message.eventType else {
         logger?.debug("Received message without event type: \(message)")
         return
       }
 
       switch eventType {
-      case .tokenExpired:
-        // deprecated type
-        break
-
       case .system:
         if message.status == .ok {
           logger?.debug("Subscribed to channel \(message.topic)")
@@ -499,7 +474,7 @@ public final class RealtimeChannelV2: Sendable, RealtimeChannelProtocol {
       )
       Task {
         await unsubscribe()
-        await subscribe()
+        try? await subscribeWithError()
       }
     }
 

@@ -110,3 +110,18 @@ extension HTTPField.Name {
 public enum LogLevel: String, Sendable {
   case info, warn, error
 }
+
+enum ChannelEvent {
+  static let leave = "phx_leave"
+  static let join = "phx_join"
+  static let broadcast = "broadcast"
+  static let presence = "presence"
+  static let postgresChanges = "postgres_changes"
+  static let system = "system"
+  static let close = "phx_close"
+  static let error = "phx_error"
+  static let presenceDiff = "presence_diff"
+  static let presenceState = "presence_state"
+  static let reply = "phx_reply"
+  static let accessToken = "access_token"
+}

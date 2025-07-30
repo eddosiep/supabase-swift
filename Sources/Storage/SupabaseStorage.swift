@@ -11,15 +11,13 @@ public struct StorageClientConfiguration: Sendable {
   public init(
     url: URL,
     headers: [String: String],
-    encoder: JSONEncoder = .defaultStorageEncoder,
-    decoder: JSONDecoder = .defaultStorageDecoder,
     session: StorageHTTPSession = .init(),
     logger: (any SupabaseLogger)? = nil
   ) {
     self.url = url
     self.headers = headers
-    self.encoder = encoder
-    self.decoder = decoder
+    self.encoder = JSONEncoder.defaultStorageEncoder
+    self.decoder = JSONDecoder.defaultStorageDecoder
     self.session = session
     self.logger = logger
   }
