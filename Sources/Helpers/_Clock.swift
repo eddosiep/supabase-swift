@@ -5,7 +5,6 @@
 //  Created by Guilherme Souza on 08/01/25.
 //
 
-import Clocks
 import ConcurrencyExtras
 import Foundation
 
@@ -13,33 +12,29 @@ package protocol _Clock: Sendable {
   func sleep(for duration: TimeInterval) async throws
 }
 
-@available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
-extension ContinuousClock: _Clock {
-  package func sleep(for duration: TimeInterval) async throws {
-    try await sleep(for: .seconds(duration))
-  }
-}
-@available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
-extension TestClock<Duration>: _Clock {
-  package func sleep(for duration: TimeInterval) async throws {
-    try await sleep(for: .seconds(duration))
-  }
-}
-
-/// `_Clock` used on platforms where ``Clock`` protocol isn't available.
-struct FallbackClock: _Clock {
+/// Clock implementation using Task.sleep for all platforms
+struct SimpleClock: _Clock {
   func sleep(for duration: TimeInterval) async throws {
     try await Task.sleep(nanoseconds: NSEC_PER_SEC * UInt64(duration))
   }
 }
 
-// Resolves clock instance based on platform availability.
-let _resolveClock: @Sendable () -> any _Clock = {
-  if #available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *) {
-    ContinuousClock()
-  } else {
-    FallbackClock()
+/// Test clock implementation for debugging/testing
+struct TestClock: _Clock {
+  private let _sleep: @Sendable (TimeInterval) async throws -> Void
+  
+  init(sleep: @escaping @Sendable (TimeInterval) async throws -> Void) {
+    self._sleep = sleep
   }
+  
+  func sleep(for duration: TimeInterval) async throws {
+    try await _sleep(duration)
+  }
+}
+
+// Resolves clock instance - using simple implementation for all platforms
+let _resolveClock: @Sendable () -> any _Clock = {
+  SimpleClock()
 }
 
 private let __clock = LockIsolated(_resolveClock())
